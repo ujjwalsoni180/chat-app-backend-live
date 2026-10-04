@@ -1,22 +1,31 @@
 const Message = require('../models/Message');
 
-// Get all messages between current logged-in user and another user
-const getMessages = async (req, res) => {
+exports.sendMessage = async (req, res) => {
   try {
-    const { userId } = req.params;
-    const currentUserId = req.user._id;
-
-    const messages = await Message.find({
-      $or: [
-        { sender: currentUserId, receiver: userId },
-        { sender: userId, receiver: currentUserId },
-      ],
-    }).sort({ createdAt: 1 });
-
-    res.json(messages);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    const { receiverId, text } = req.body;
+    const message = new Message({
+      sender: req.user.id,
+      receiver: receiverId,
+      text
+    });
+    await message.save();
+    res.status(201).json(message);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };
 
-module.exports = { getMessages };
+exports.getMessages = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const messages = await Message.find({
+      $or: [
+        { sender: req.user.id, receiver: userId },
+        { sender: userId, receiver: req.user.id }
+      ]
+    });
+    res.json(messages);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
